@@ -5,7 +5,6 @@
 #ifndef HEADLESS
 #include <SDL.h>
 #endif
-#include "features.h"
 #include "util.h"
 
 enum {

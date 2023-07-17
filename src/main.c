@@ -17,17 +17,15 @@
 
 #include "types.h"
 #include "smw_rtl.h"
-#include "smw_cpu_infra.h"
+#include "common_cpu_infra.h"
 #include "config.h"
 #include "util.h"
-#include "spc_player.h"
+#include "smw_spc_player.h"
 
 #ifdef __SWITCH__
 #include "switch_impl.h"
 #endif
 
-static void playAudio(Snes *snes, SDL_AudioDeviceID device, int16_t *audioBuffer);
-static void renderScreen(Snes *snes, SDL_Renderer *renderer, SDL_Texture *texture);
 static void SDLCALL AudioCallback(void *userdata, Uint8 *stream, int len);
 static void SwitchDirectory();
 static void RenderNumber(uint8 *dst, size_t pitch, int n, uint8 big);
@@ -41,12 +39,9 @@ static void HandleCommand(uint32 j, bool pressed);
 void OpenGLRenderer_Create(struct RendererFuncs *funcs);
 
 bool g_debug_flag;
-bool g_is_turbo;
-bool g_is_turbo;
 bool g_want_dump_memmap_flags;
-bool g_new_ppu;
 bool g_new_ppu = true;
-bool g_other_image;
+bool g_other_image = false;
 struct SpcPlayer *g_spc_player;
 static uint32_t button_state;
 
@@ -54,7 +49,6 @@ static uint8_t g_pixels[256 * 4 * 240];
 static uint8_t g_my_pixels[256 * 4 * 240];
 
 int g_got_mismatch_count;
-
 
 enum {
   kDefaultFullscreen = 0,
@@ -163,6 +157,8 @@ static SDL_HitTestResult HitTestCallback(SDL_Window *win, const SDL_Point *pt, v
 }
 
 void RtlDrawPpuFrame(uint8 *pixel_buffer, size_t pitch, uint32 render_flags) {
+  g_rtl_game_info->draw_ppu_frame();
+  
   uint8 *ppu_pixels = g_other_image ? g_my_pixels : g_pixels;
   for (size_t y = 0, y_end = g_snes_height; y < y_end; y++)
     memcpy((uint8 *)pixel_buffer + y * pitch, ppu_pixels + y * 256 * 4, 256 * 4);
@@ -409,8 +405,13 @@ int main(int argc, char** argv) {
   g_audio_mutex = SDL_CreateMutex();
   if (!g_audio_mutex) Die("No mutex");
 
-  g_spc_player = SpcPlayer_Create();
-  SpcPlayer_Initialize(g_spc_player);
+  if (g_rtl_game_info->game_id == kGameID_SMB1 ||
+      g_rtl_game_info->game_id == kGameID_SMBLL)
+    g_spc_player = SmasSpcPlayer_Create();
+  else if (g_rtl_game_info->game_id == kGameID_SMW)
+    g_spc_player = SmwSpcPlayer_Create();
+
+  g_spc_player->initialize(g_spc_player);
 
   bool enable_audio = true;
   if (enable_audio) {
@@ -418,7 +419,7 @@ int main(int argc, char** argv) {
     want.freq = 44100;
     want.format = AUDIO_S16;
     want.channels = 2;
-    want.samples = 2048;
+    want.samples = g_config.audio_samples;
     want.callback = &AudioCallback;
     g_audio_device = SDL_OpenAudioDevice(NULL, 0, &want, &have, 0);
     if (g_audio_device == 0) {
