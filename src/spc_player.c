@@ -1511,6 +1511,7 @@ void Sfx3_Init(SpcPlayer *p) {
 }
 
 SpcPlayer *SpcPlayer_Create(void) {
+  // TODO static alloc !!!
   SpcPlayer *p = (SpcPlayer *)malloc(sizeof(SpcPlayer));
   memset(p, 0, sizeof(SpcPlayer));
   p->dsp = dsp_init(p->ram);

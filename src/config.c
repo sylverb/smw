@@ -2,7 +2,9 @@
 #include "types.h"
 #include <stdio.h>
 #include <string.h>
+#ifndef HEADLESS
 #include <SDL.h>
+#endif
 #include "features.h"
 #include "util.h"
 
@@ -14,6 +16,8 @@ enum {
 };
 
 Config g_config;
+
+#ifndef HEADLESS
 
 #define REMAP_SDL_KEYCODE(key) ((key) & SDLK_SCANCODE_MASK ? kKeyMod_ScanCode : 0) | (key) & (kKeyMod_ScanCode - 1)
 #define _(x) REMAP_SDL_KEYCODE(x)
@@ -47,6 +51,8 @@ static const uint16 kDefaultKbdControls[kKeys_Total] = {
 #undef C
 #undef S
 #undef N
+
+#endif
 
 typedef struct KeyNameId {
   const char *name;
@@ -108,6 +114,7 @@ static int KeyMapHash_Find(uint16 key) {
   return 0;
 }
 
+#ifndef HEADLESS
 int FindCmdForSdlKey(SDL_Keycode code, SDL_Keymod mod) {
   if (code & ~(SDLK_SCANCODE_MASK | 0x1ff))
     return 0;
@@ -121,6 +128,7 @@ int FindCmdForSdlKey(SDL_Keycode code, SDL_Keymod mod) {
   key |= REMAP_SDL_KEYCODE(code);
   return KeyMapHash_Find(key);
 }
+#endif
 
 static void ParseKeyArray(char *value, int cmd, int size) {
   char *s;
@@ -140,6 +148,7 @@ static void ParseKeyArray(char *value, int cmd, int size) {
         break;
       }
     }
+    #ifndef HEADLESS
     SDL_Keycode key = SDL_GetKeyFromName(s);
     if (key == SDLK_UNKNOWN) {
       fprintf(stderr, "Unknown key: '%s'\n", s);
@@ -147,6 +156,7 @@ static void ParseKeyArray(char *value, int cmd, int size) {
     }
     if (!KeyMapHash_Add(key_with_mod | REMAP_SDL_KEYCODE(key), cmd))
       fprintf(stderr, "Duplicate key: '%s'\n", s);
+    #endif
   }
 }
 
@@ -253,6 +263,8 @@ static void ParseGamepadArray(char *value, int cmd, int size) {
 }
 
 static void RegisterDefaultKeys(void) {
+  #ifndef HEADLESS
+
   for (int i = 1; i < countof(kKeyNameId); i++) {
     if (!has_keynameid[i]) {
       int size = kKeyNameId[i].size, k = kKeyNameId[i].id;
@@ -264,6 +276,8 @@ static void RegisterDefaultKeys(void) {
     for (int i = 0; i < countof(kDefaultGamepadCmds); i++)
       GamepadMap_Add(kDefaultGamepadCmds[i], 0, kKeys_Controls + i);
   }
+
+  #endif
 }
 
 static int GetIniSection(const char *s) {
