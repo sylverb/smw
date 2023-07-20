@@ -254,7 +254,7 @@ Snes *SnesInit(const uint8 *data, int data_size) {
   RtlSetupEmuCallbacks(NULL, &RtlRunFrameCompare, NULL);
 
   if (data_size != 0) {
-    bool loaded = snes_loadRom(g_snes, data, data_size);
+    /*bool loaded = snes_loadRom(g_snes, data, data_size);
     if (!loaded) {
       return NULL;
     }
@@ -277,7 +277,7 @@ Snes *SnesInit(const uint8 *data, int data_size) {
         printf("0x%x double patched!\n", g_rtl_game_info->patch_carrys[i]);
       }
     }
-    PatchBugs(1, 0);
+    PatchBugs(1, 0);*/
   } else {
     g_runmode = RM_MINE;
     g_snes->cart->ramSize = 2048;

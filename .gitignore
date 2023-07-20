@@ -6,7 +6,7 @@
 *.o
 /smw
 /build/
-/smw.sfc
+smw.sfc
 SDL2.dll
 /smw.exe
 /glsl-shaders/

@@ -12,7 +12,7 @@
 
 
 extern bool g_new_ppu;
-void PpuDrawWholeLineOldPpu(Ppu *ppu, int line);
+//void PpuDrawWholeLineOldPpu(Ppu *ppu, int line);
 static void PpuDrawWholeLine(Ppu *ppu, uint y);
 
 static bool ppu_evaluateSprites(Ppu* ppu, int line);
@@ -20,6 +20,7 @@ static uint16_t ppu_getVramRemap(Ppu* ppu);
 
 
 Ppu* ppu_init(void) {
+  // TODO static allocation
   Ppu* ppu = malloc(sizeof(Ppu));
   return ppu;
 }
@@ -119,7 +120,7 @@ void ppu_runLine(Ppu* ppu, int line) {
     if (g_new_ppu) {
       PpuDrawWholeLine(ppu, line);
     } else {
-      PpuDrawWholeLineOldPpu(ppu, line);
+      //PpuDrawWholeLineOldPpu(ppu, line);
     }
   }
 }
@@ -658,7 +659,7 @@ static void PpuDrawBackgrounds(Ppu *ppu, int y, bool sub) {
 static NOINLINE void PpuDrawWholeLine(Ppu *ppu, uint y) {
   if (PPU_forcedBlank(ppu)) {
     uint8 *dst = &ppu->renderBuffer[(y - 1) * ppu->renderPitch];
-    size_t n = sizeof(uint32) * (256 + ppu->extraLeftRight * 2);
+    size_t n = sizeof(uint16_t) * (256 + ppu->extraLeftRight * 2);
     memset(dst, 0, n);
     return;
   }
@@ -689,7 +690,7 @@ static NOINLINE void PpuDrawWholeLine(Ppu *ppu, uint y) {
   uint32 cw_clip_math = ((cwin.bits & kCwBitsMod[PPU_clipMode(ppu)]) ^ kCwBitsMod[PPU_clipMode(ppu) + 4]) |
     ((cwin.bits & kCwBitsMod[PPU_preventMathMode(ppu)]) ^ kCwBitsMod[PPU_preventMathMode(ppu) + 4]) << 8;
 
-  uint32 *dst = (uint32*)&ppu->renderBuffer[(y - 1) * ppu->renderPitch], *dst_org = dst;
+  uint16_t *dst = (uint16_t*)&ppu->renderBuffer[(y - 1) * ppu->renderPitch], *dst_org = dst;
 
   dst += (ppu->extraLeftRight - ppu->extraLeftCur);
 
@@ -699,15 +700,15 @@ static NOINLINE void PpuDrawWholeLine(Ppu *ppu, uint y) {
     // If clip is set, then zero out the rgb values from the main screen.
     uint32 clip_color_mask = (cw_clip_math & 1) ? 0x1f : 0;
     uint32 math_enabled_cur = PPU_mathEnabled(ppu) & ((cw_clip_math & 0x100) ? -1 : 0);
-    uint32 fixed_color = ppu->fixedColor;
+    uint16_t fixed_color = ppu->fixedColor; // FIXME color conversion ???
     if (math_enabled_cur == 0 || fixed_color == 0 && !PPU_halfColor(ppu) && !rendered_subscreen) {
       // Math is disabled (or has no effect), so can avoid the per-pixel maths check
       uint32 i = left;
       do {
-        uint32 color = ppu->cgram[ppu->bgBuffers[0].data[i] & 0xff];
-        dst[0] = ppu->brightnessMult[color & clip_color_mask] << 16 |
-          ppu->brightnessMult[(color >> 5) & clip_color_mask] << 8 |
-          ppu->brightnessMult[(color >> 10) & clip_color_mask];
+        uint16_t color = ppu->cgram[ppu->bgBuffers[0].data[i] & 0xff];
+        dst[0] = (ppu->brightnessMult[color & clip_color_mask] >> 3) << 11 |
+          (ppu->brightnessMult[(color >> 5) & clip_color_mask] >> 2) << 5 |
+          (ppu->brightnessMult[(color >> 10) & clip_color_mask] >> 3);
       } while (dst++, ++i < right);
     } else {
       uint8 *half_color_map = PPU_halfColor(ppu) ? ppu->brightnessMultHalf : ppu->brightnessMult;
@@ -716,7 +717,7 @@ static NOINLINE void PpuDrawWholeLine(Ppu *ppu, uint y) {
       // Need to check for each pixel whether to use math or not based on the main screen layer.
       uint32 i = left;
       do {
-        uint32 color = ppu->cgram[ppu->bgBuffers[0].data[i] & 0xff], color2;
+        uint16_t color = ppu->cgram[ppu->bgBuffers[0].data[i] & 0xff], color2;
         uint8 main_layer = (ppu->bgBuffers[0].data[i] >> 8) & 0xf;
         uint32 r = color & clip_color_mask;
         uint32 g = (color >> 5) & clip_color_mask;
@@ -742,7 +743,8 @@ static NOINLINE void PpuDrawWholeLine(Ppu *ppu, uint y) {
             b += b2;
           }
         }
-        dst[0] = color_map[b] | color_map[g] << 8 | color_map[r] << 16;
+        // FIXME dst[0] = color_map[b] | color_map[g] << 8 | color_map[r] << 16;
+        dst[0] = (color_map[b] >> 3) | (color_map[g] >> 2) << 5 | (color_map[r] >> 3) << 11;
       } while (dst++, ++i < right);
     }
   } while (cw_clip_math >>= 1, ++windex < cwin.nr);
