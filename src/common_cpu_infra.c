@@ -300,7 +300,7 @@ void SaveBugSnapshot() {
   if (!g_debug_flag && g_got_mismatch_count == 0) {
     char buffer[64];
     snprintf(buffer, sizeof(buffer), "saves/%s-bug-%d.sav", g_rtl_game_info->title, (int)time(NULL));
-    RtlSaveSnapshot(buffer, true);
+    //RtlSaveSnapshot(buffer, true);
   }
   g_got_mismatch_count = 5 * 60;
 }

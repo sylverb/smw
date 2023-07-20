@@ -112,7 +112,7 @@ enum {
   kSaveLoad_Replay = 3,
 };
 
-void RtlSaveLoad(int cmd, int slot);
+void RtlSaveLoad(int cmd, uint8* slot);
 void RtlCheat(char c);
 void RtlApuLock();
 void RtlApuUnlock();
@@ -124,7 +124,16 @@ void RtlPushApuState();
 bool RtlRunFrame(int inputs);
 void RtlReadSram();
 void RtlWriteSram();
-void RtlSaveSnapshot(const char *filename, bool saving_with_bug);
+
+
+extern uint8_t* readSramImpl();
+extern void writeSramImpl(uint8_t* sram);
+
+extern void writeSaveStateInitImpl();
+extern void writeSaveStateImpl(uint8_t* data, size_t size);
+extern void writeSaveStateFinalizeImpl();
+
+void RtlSaveSnapshot(/*const char *filename, bool saving_with_bug*/ uint8* slot_addr);
 
 void RtlUpdatePalette(const uint16 *src, int dst, int n);
 uint16 *RtlGetVramAddr();

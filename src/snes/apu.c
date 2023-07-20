@@ -65,7 +65,7 @@ void apu_cycle(Apu* apu) {
   if(apu->cpuCyclesLeft == 0) {
     if (g_debug_apu_cycles) {
       char line[80];
-      getProcessorStateSpc(apu, line);
+      //getProcessorStateSpc(apu, line);
       puts(line);
     }
     apu->cpuCyclesLeft = spc_runOpcode(apu->spc);

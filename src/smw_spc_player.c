@@ -1333,6 +1333,7 @@ static void SmwSpcPlayer_Upload(SpcPlayer *p_in, const uint8_t *data) {
 }
 
 SpcPlayer *SmwSpcPlayer_Create(void) {
+  // TODO static alloc !!!
   SmwSpcPlayer *p = (SmwSpcPlayer *)malloc(sizeof(SmwSpcPlayer));
   memset(p, 0, sizeof(SmwSpcPlayer));
   p->base.dsp = dsp_init(p->ram);

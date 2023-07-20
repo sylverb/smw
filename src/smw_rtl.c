@@ -41,9 +41,9 @@ void SetSprXYPos(uint8 k, uint16 x, uint16 y) {
 }
 
 void SmwSavePlaythroughSnapshot() {
-  char buf[128];
+  /*char buf[128];
   snprintf(buf, sizeof(buf), "playthrough/%d_%d_%d.sav", ow_level_number_lo, misc_exit_level_action, (int)time(NULL));
-  RtlSaveSnapshot(buf, false);
+  RtlSaveSnapshot(buf, false);*/
 }
 
 void UploadOAMBuffer() {  // 008449
