@@ -12,8 +12,10 @@ static void cart_writeLorom(Cart* cart, uint8_t bank, uint16_t adr, uint8_t val)
 static uint8_t cart_readHirom(Cart* cart, uint8_t bank, uint16_t adr);
 static void cart_writeHirom(Cart* cart, uint8_t bank, uint16_t adr, uint8_t val);
 
+static Cart g_static_cart;
+
 Cart* cart_init(Snes* snes) {
-  Cart* cart = malloc(sizeof(Cart));
+  Cart* cart = &g_static_cart;  //malloc(sizeof(Cart));
   cart->snes = snes;
   cart->type = 0;
   cart->rom = NULL;
@@ -24,7 +26,7 @@ Cart* cart_init(Snes* snes) {
 }
 
 void cart_free(Cart* cart) {
-  free(cart);
+  //free(cart);
 }
 
 void cart_reset(Cart* cart) {
@@ -35,6 +37,7 @@ void cart_saveload(Cart *cart, SaveLoadInfo *sli) {
   sli->func(sli, cart->ram, cart->ramSize);
 }
 
+// FIXME Static alloc if used!!!
 void cart_load(Cart* cart, int type, uint8_t* rom, int romSize, int ramSize) {
   cart->type = type;
   if(cart->rom != NULL) free(cart->rom);

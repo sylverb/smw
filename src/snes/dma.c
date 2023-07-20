@@ -27,14 +27,16 @@ static const int transferLength[8] = {
 
 static void dma_transferByte(Dma* dma, uint16_t aAdr, uint8_t aBank, uint8_t bAdr, bool fromB);
 
+static Dma g_static_dma;
+
 Dma* dma_init(Snes* snes) {
-  Dma* dma = malloc(sizeof(Dma));
+  Dma* dma = &g_static_dma; //malloc(sizeof(Dma));
   dma->snes = snes;
   return dma;
 }
 
 void dma_free(Dma* dma) {
-  free(dma);
+  //free(dma);
 }
 
 void dma_reset(Dma* dma) {

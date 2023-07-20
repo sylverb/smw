@@ -26,13 +26,17 @@ static const double apuCyclesPerMaster = (32040 * 32) / (1364 * 262 * 60.0);
 static uint8_t snes_readReg(Snes* snes, uint16_t adr);
 static void snes_writeReg(Snes* snes, uint16_t adr, uint8_t val);
 
+static Snes g_static_snes;
+
 Snes* snes_init(uint8_t *ram) {
-  Snes* snes = malloc(sizeof(Snes));
+  // Static allocation
+  Snes* snes = &g_static_snes;  //malloc(sizeof(Snes));
   snes->ram = ram;
   snes->debug_cycles = false;
   snes->debug_apu_cycles = false;
   snes->runningWhichVersion = 0;
 
+  // TODO Static alloc for all components!!!
   snes->cpu = cpu_init(snes, 0);
   snes->apu = apu_init();
   snes->dma = dma_init(snes);
@@ -51,7 +55,7 @@ void snes_free(Snes* snes) {
   cart_free(snes->cart);
   input_free(snes->input1);
   input_free(snes->input2);
-  free(snes);
+  //free(snes);
 }
 
 void snes_saveload(Snes *snes, SaveLoadInfo *sli) {

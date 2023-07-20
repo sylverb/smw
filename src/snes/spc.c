@@ -54,14 +54,16 @@ static void spc_write(Spc* spc, uint16_t adr, uint8_t val) {
   apu_cpuWrite(spc->apu, adr, val);
 }
 
+static Spc g_static_spc;
+
 Spc* spc_init(Apu* apu) {
-  Spc* spc = malloc(sizeof(Spc));
+  Spc* spc = &g_static_spc; //malloc(sizeof(Spc));
   spc->apu = apu;
   return spc;
 }
 
 void spc_free(Spc* spc) {
-  free(spc);
+  //free(spc);
 }
 
 void spc_reset(Spc* spc) {

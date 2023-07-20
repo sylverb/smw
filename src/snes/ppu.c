@@ -18,15 +18,16 @@ static void PpuDrawWholeLine(Ppu *ppu, uint y);
 static bool ppu_evaluateSprites(Ppu* ppu, int line);
 static uint16_t ppu_getVramRemap(Ppu* ppu);
 
+static Ppu g_static_ppu;
 
 Ppu* ppu_init(void) {
-  // TODO static allocation
-  Ppu* ppu = malloc(sizeof(Ppu));
+  // Static allocation
+  Ppu* ppu = &g_static_ppu;  //malloc(sizeof(Ppu));
   return ppu;
 }
 
 void ppu_free(Ppu* ppu) {
-  free(ppu);
+  //free(ppu);
 }
 
 void ppu_copy(Ppu *ppu, Ppu *ppu_src) {

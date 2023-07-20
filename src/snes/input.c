@@ -8,8 +8,11 @@
 #include "input.h"
 #include "snes.h"
 
+// FIXME Handle 2 input instances ???
+static Input g_static_input;
+
 Input* input_init(Snes* snes) {
-  Input* input = malloc(sizeof(Input));
+  Input* input = &g_static_input; //malloc(sizeof(Input));
   input->snes = snes;
   // TODO: handle (where?)
   input->type = 1;
@@ -18,7 +21,7 @@ Input* input_init(Snes* snes) {
 }
 
 void input_free(Input* input) {
-  free(input);
+  //free(input);
 }
 
 void input_reset(Input* input) {

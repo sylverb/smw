@@ -60,14 +60,16 @@ static void dsp_decodeBrr(Dsp* dsp, int ch);
 static int16_t dsp_getSample(Dsp* dsp, int ch, int sampleNum, int offset);
 static void dsp_handleNoise(Dsp* dsp);
 
+static Dsp g_static_dsp;
+
 Dsp* dsp_init(uint8_t *ram) {
-  Dsp* dsp = malloc(sizeof(Dsp));
+  Dsp* dsp = &g_static_dsp; //malloc(sizeof(Dsp));
   dsp->apu_ram = ram;
   return dsp;
 }
 
 void dsp_free(Dsp* dsp) {
-  free(dsp);
+  //free(dsp);
 }
 
 void dsp_reset(Dsp* dsp) {

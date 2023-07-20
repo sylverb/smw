@@ -60,8 +60,11 @@ static void cpu_write(Cpu* cpu, uint32_t adr, uint8_t val) {
   snes_cpuWrite((Snes*) cpu->mem, adr, val);
 }
 
+static Cpu g_static_cpu;
+
 Cpu* cpu_init(void* mem, int memType) {
-  Cpu* cpu = malloc(sizeof(Cpu));
+  // Static allocation
+  Cpu* cpu = &g_static_cpu; //malloc(sizeof(Cpu));
   memset(cpu, 0, sizeof(Cpu));
   cpu->mem = mem;
   cpu->memType = memType;
@@ -69,7 +72,7 @@ Cpu* cpu_init(void* mem, int memType) {
 }
 
 void cpu_free(Cpu* cpu) {
-  free(cpu);
+  //free(cpu);
 }
 
 void cpu_reset(Cpu* cpu) {
