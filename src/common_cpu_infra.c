@@ -241,6 +241,8 @@ static void RestoreSnapshot(Snapshot *s) {
 static void FixupCarry(uint32 addr) {
   *SnesRomPtr(addr) = 0;
 }
+
+static uint8_t g_static_ram[2048];
   
 Snes *SnesInit(const uint8 *data, int data_size) {
   g_my_ppu = ppu_init();
@@ -280,8 +282,9 @@ Snes *SnesInit(const uint8 *data, int data_size) {
     PatchBugs(1, 0);*/
   } else {
     g_runmode = RM_MINE;
-    g_snes->cart->ramSize = 2048;
-    g_snes->cart->ram = calloc(1, 2048);
+    g_snes->cart->ramSize = 2048;*
+    // Static allocation
+    g_snes->cart->ram = &g_static_ram;  //calloc(1, 2048);
     g_rtl_game_info = &kSmwGameInfo;
 
     ppu_reset(g_snes->ppu);
@@ -361,17 +364,17 @@ static void RtlRunFrameCompare(uint16 input, int run_what) {
 
   g_use_my_apu_code = (g_runmode != RM_THEIRS);
 
-  if (g_runmode == RM_THEIRS) {
+  /*if (g_runmode == RM_THEIRS) {
     g_ppu = g_snes->ppu;
     g_snes->runningWhichVersion = 1;
     g_rtl_game_info->run_frame_emulated();
     g_snes->runningWhichVersion = 0;
-  } else if (g_runmode == RM_MINE) {
+  } else if (g_runmode == RM_MINE) {*/
     g_ppu = g_my_ppu;
     g_snes->runningWhichVersion = 2;
     g_rtl_game_info->run_frame();
     g_snes->runningWhichVersion = 0;
-  } else {
+  /*} else {
     RunOneFrameOfGame_Both();
-  }
+  }*/
 }

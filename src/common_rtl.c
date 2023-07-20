@@ -422,7 +422,7 @@ void RtlStopReplay(void) {
 }
 
 bool RtlRunFrame(int inputs) {
-  if (g_did_finish_level_hook) {
+  /*if (g_did_finish_level_hook) {
     if (game_id == kGameID_SMW && !state_recorder.replay_mode && g_config.save_playthrough) {
       SmwSavePlaythroughSnapshot();
       RtlClearKeyLog();
@@ -430,24 +430,24 @@ bool RtlRunFrame(int inputs) {
     g_did_finish_level_hook = false;
     if (g_playback_mode)
       SmwLoadNextPlaybackSnapshot();
-  }
+  }*/
 
   // Avoid up/down and left/right from being pressed at the same time
   if ((inputs & 0x30) == 0x30) inputs ^= 0x30;
   if ((inputs & 0xc0) == 0xc0) inputs ^= 0xc0;
 
-  bool is_replay = state_recorder.replay_mode;
+  //bool is_replay = state_recorder.replay_mode;
 
   // Either copy state or apply state
-  if (is_replay) {
+  //if (is_replay) {
     //inputs = StateRecorder_ReadNextReplayState(&state_recorder);
-  } else {
+  //} else {
     // Loading a bug snapshot?
-    if (state_recorder.snapshot_flags & 1) {
+    /*if (state_recorder.snapshot_flags & 1) {
       state_recorder.snapshot_flags &= ~1;
       inputs = state_recorder.last_inputs;
-    }
-    StateRecorder_Record(&state_recorder, inputs);
+    }*/
+    //StateRecorder_Record(&state_recorder, inputs);
 
     if (game_id == kGameID_SMW) {
       // This is whether APUI02 is true or false, this is used by the ancilla code.
@@ -457,14 +457,14 @@ bool RtlRunFrame(int inputs) {
         //StateRecorder_RecordPatchByte(&state_recorder, kSmwRam_APUI02, &apui02, 1);
       }
     }
-  }
+  //}
 
   g_rtl_runframe(inputs, 0);
 
   // FIXME snes_frame_counter++;
 
   RtlPushApuState();
-  return is_replay;
+  return false;//is_replay;
 }
 
 void RtlSaveSnapshot(/*const char *filename, bool saving_with_bug*/ uint8* slot_addr) {
