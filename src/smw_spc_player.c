@@ -251,14 +251,14 @@ static void HandlePanAndSweep(SmwSpcPlayer *p, Channel *c);
 static void CalcFinalVolume(SmwSpcPlayer *p, Channel *c, uint8 vol);
 
 static void Dsp_Write(SmwSpcPlayer *p, uint8_t reg, uint8 value) {
-  DspRegWriteHistory *hist = p->reg_write_history;
+  /*DspRegWriteHistory *hist = p->reg_write_history;
   if (hist) {
     if (hist->count < 256) {
       hist->addr[hist->count] = reg;
       hist->val[hist->count] = value;
       hist->count++;
     }
-  }
+  }*/
   if (p->base.dsp)
     dsp_write(p->base.dsp, reg, value);
 }
@@ -1310,7 +1310,7 @@ static void SmwSpcPlayer_GenerateSamples(SpcPlayer *p_in) {
 static void SmwSpcPlayer_Upload(SpcPlayer *p_in, const uint8_t *data) {
   const uint8 *data_org = data;
   SmwSpcPlayer *p = (SmwSpcPlayer *)p_in;
-  Dsp_Write(p, FLG, 0x60);
+  Dsp_Write(p, FLG, 0x60);  // FIXME failure
   Dsp_Write(p, KOF, 0xff);
   for (;;) {
     int numbytes = *(uint16 *)(data);
