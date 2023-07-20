@@ -17,7 +17,7 @@
 ## Building with Tiny C Compiler
 
  Dependencies and requirements:
- * You'll need [TCC](https://github.com/FitzRoyX/tinycc/releases/download/tcc_20230519/tcc_20230519.zip) and [SDL2](https://github.com/libsdl-org/SDL/releases/download/release-2.26.5/SDL2-devel-2.26.5-VC.zip) in order to compile using TCC.
+ * You'll need [TCC](https://github.com/FitzRoyX/tinycc/releases/download/tcc_20230519/tcc_20230519.zip) and [SDL2](https://github.com/libsdl-org/SDL/releases/download/release-2.28.1/SDL2-devel-2.28.1-VC.zip) in order to compile using TCC.
 
 1. Rename your obtaind Super Mario World rom to `smw.sfc` and place it in the root folder.
 2. Unzip both TCC and SDL2 and place them in `third_party` folder.
@@ -74,13 +74,12 @@ Dependencies and requirements:
   * Super Mario All-Stars rom (US version and not + Mario World)
   * `zstandard`
 
-1. In MSYS2 terminal, type `git checkout smb1` or `git checkout devel` to change the branches.
-2. Rename your obtained rom to `smas.sfc` and place it inside the `other` folder.
-3. To install `zstandard` make sure you've installed Python and added to PATH. Open up CMD and type `pip install zstandard` to install the required dep.
-4. In the `other` folder drag and drop your renamed rom into `extract.py` or by typing `extract.py` in the command line to extract the necessary files.
-5. Move `smb1.sfc` and `smbll.sfc` to root folder.
-6. Before running the games, make sure to recompile or else they won't boot up.
-7. Drag your desired game to `smw.exe` in order to run.
+1. Rename your obtained rom to `smas.sfc` and place it inside the `other` folder.
+2. To install `zstandard` make sure you've installed Python and added to PATH. Open up CMD and type `pip install zstandard` to install the required dep.
+3. In the `other` folder drag and drop your renamed rom into `extract.py` or by typing `extract.py` in the command line to extract the necessary files.
+4. Move `smb1.sfc` and `smbll.sfc` to root folder.
+5. Before running the games, make sure to recompile or else they won't boot up.
+6. Drag your desired game to `smw.exe` in order to run.
 
  
 # Linux/MacOS
