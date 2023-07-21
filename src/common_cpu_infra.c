@@ -242,7 +242,7 @@ static void FixupCarry(uint32 addr) {
   *SnesRomPtr(addr) = 0;
 }
 
-static uint8_t g_static_ram[2048];
+static uint8_t g_static_ram[2048] __attribute__((aligned(4)));
   
 Snes *SnesInit(const uint8 *data, int data_size) {
   g_my_ppu = ppu_init();
@@ -282,7 +282,7 @@ Snes *SnesInit(const uint8 *data, int data_size) {
     PatchBugs(1, 0);*/
   } else {
     g_runmode = RM_MINE;
-    g_snes->cart->ramSize = 2048;*
+    g_snes->cart->ramSize = 2048;
     // Static allocation
     g_snes->cart->ram = &g_static_ram;  //calloc(1, 2048);
     g_rtl_game_info = &kSmwGameInfo;

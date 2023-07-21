@@ -398,7 +398,7 @@ void StateRecorder_StopReplay(StateRecorder *sr) {
 }*/
 
 void StateRecorder_Load(uint8* slot_addr) {
-  size_t size = *((size_t*) slot_addr);
+  size_t size = *((size_t*) slot_addr); // TODO fix savestate size !!!
   LoadFuncState state = { {&loadFunc }, slot_addr + sizeof(size_t), slot_addr + sizeof(size_t), slot_addr + sizeof(size_t) + size };
   LoadSnesState(&state.base);
   assert(state.p == state.pend);
@@ -809,7 +809,7 @@ void RtlReadSram(void) {
       fprintf(stderr, "Error reading %s\n", filename);
     fclose(f);*/
     uint8_t* sram = readSramImpl();
-    memcpy(g_sram, sram, 8192);
+    memcpy(g_sram, sram, 2048); // FIXME g_sram is NULL ??? no, g_static_ram
     RtlSynchronizeWholeState();
     /*ByteArray_Resize(&state_recorder.base_snapshot, g_sram_size);
     memcpy(state_recorder.base_snapshot.data, g_sram, g_sram_size);
@@ -817,7 +817,7 @@ void RtlReadSram(void) {
 }
 
 void RtlWriteSram(void) {
-  writeSramImpl(g_sram);
+  writeSramImpl(g_sram);  // FIXME g_sram is NULL ??? --> no, g_static_ram
   /*char filename[64], filename_bak[64];
   snprintf(filename, sizeof(filename), "saves/%s.srm", g_rtl_game_info->title);
   snprintf(filename_bak, sizeof(filename_bak), "saves/%s.srm.bak", g_rtl_game_info->title);
