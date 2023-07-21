@@ -134,6 +134,7 @@ struct Ppu {
   uint8_t lastMosaicModulo;
   uint8_t lastBrightnessMult;
   bool lineHasSprites;
+  uint16_t _dummy_align;  // dummy bytes for alignment of buffers
   PpuPixelPrioBufs bgBuffers[2];
   PpuPixelPrioBufs objBuffer;
   uint32_t renderPitch;
