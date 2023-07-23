@@ -713,7 +713,7 @@ void RtlPushApuState(void) {
 }
 
 static void RtlPopApuState_Locked(void) {
-  uint8 *input_ports = /*g_use_my_apu_code ? g_spc_player->input_ports :*/ g_snes->apu->inPorts;
+  uint8 *input_ports = g_use_my_apu_code ? g_spc_player->input_ports : g_snes->apu->inPorts;
   if (g_apu_queue_size != 0) {
     ApuWriteEnt *w = &g_apu_write_ents[(g_apu_write_ent_pos - g_apu_queue_size--) & (kApuMaxQueueSize - 1)];
     for (int i = 0; i != 4; i++) {
@@ -750,12 +750,12 @@ static uint8 RtlApuReadReg(int reg) {
 }
 
 void RtlRestoreMusicAfterLoad_Locked(bool is_reset) {
-  /*if (g_use_my_apu_code) {
+  if (g_use_my_apu_code) {
     memcpy(g_spc_player->ram, g_snes->apu->ram, 65536);
     memcpy(g_spc_player->input_ports, g_snes->apu->inPorts, 4);
     memcpy(g_spc_player->dsp->ram, g_snes->apu->dsp->ram, sizeof(Dsp) - offsetof(Dsp, ram));
     g_spc_player->copy_vars(g_spc_player, false);
-  }*/
+  }
   if (is_reset) {
     g_spc_player->initialize(g_spc_player);
   }
@@ -763,14 +763,14 @@ void RtlRestoreMusicAfterLoad_Locked(bool is_reset) {
 }
 
 void RtlSaveMusicStateToRam_Locked(void) {
-  /*if (g_use_my_apu_code) {
+  if (g_use_my_apu_code) {
     SpcPlayer *spc_player = g_spc_player;
 
     g_spc_player->copy_vars(g_spc_player, true);
     memcpy(g_snes->apu->dsp->ram, g_spc_player->dsp->ram, sizeof(Dsp) - offsetof(Dsp, ram));
     memcpy(g_snes->apu->ram, g_spc_player->ram, 65536);
     memcpy(g_snes->apu->inPorts, g_spc_player->input_ports, 4);
-  }*/
+  }
 }
 
 void RtlRenderAudio(int16 *audio_buffer, int samples, int channels) {
