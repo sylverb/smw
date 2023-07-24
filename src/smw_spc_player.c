@@ -1340,7 +1340,7 @@ static void SmwSpcPlayer_Upload(SpcPlayer *p_in, const uint8_t *data) {
   Dsp_Write(p, FLG, 0x20);  
 }
 
-static SpcPlayer g_static_spcplayer;
+static SmwSpcPlayer g_static_spcplayer;
 
 SpcPlayer *SmwSpcPlayer_Create(void) {
   // TODO static alloc !!!

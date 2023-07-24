@@ -89,9 +89,8 @@ static void SaveSnesState(SaveLoadInfo *sli) {
 }
 
 static size_t InternalSaveLoadSize() {
-  // FIXME savestate size ??? how much is saved by snes_saveload() ???
-  // 275465 bytes
-  return 27 + 0x10000 + 40 + 3024 + 15 + 192 + 66619 + 512 + 174 + 8192 + 58 + 0x20000 + 4;
+  // 268708 bytes
+  return 27 + 0x10000 + 40 + 3024 + 15 + 224 + 8 + 64 + 66592 + 2048 + 54 + 0x20000 + 4;
 }
 
 typedef struct StateRecorder {
