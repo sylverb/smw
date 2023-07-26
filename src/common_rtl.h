@@ -165,3 +165,9 @@ enum {
 
   kJoypadH_AnyDir = 0xf,
 };
+
+enum {
+  kFeatures0_SaveAfterEachBeatenLevel = 1
+};
+
+extern uint32 g_wanted_features;

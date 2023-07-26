@@ -699,12 +699,21 @@ LABEL_11:
   OwProcess04_PlayerIsMoving_049831();
 }
 
+bool flag_skip_save_prompt = false;
+
 void OwProcess02_HandleLevelBeaten() {  // 048f87
   UnlockOverworldPathBasedOnExit();
+  // Optional feature: save to SRAM after each beaten level
   uint8 v0 = 7;
   while ((uint8)ow_tile_player_is_standing_on != kOverworldProcess02_HandleLevelBeaten_DATA_048F7F[v0]) {
-    if ((--v0 & 0x80) != 0)
-      goto LABEL_10;
+    if ((--v0 & 0x80) != 0) {
+      if (g_wanted_features & kFeatures0_SaveAfterEachBeatenLevel) {
+        flag_skip_save_prompt = true;
+        break;
+      } else {
+        goto LABEL_10;
+      }
+    }
   }
   for (uint8 i = 44; (i & 0x80) == 0; --i)
     ow_save_buffer[i + 96] = ow_event_flags[i];
@@ -742,7 +751,12 @@ void UpdateSaveBuffer() {  // 049037
     for (uint8 i = 95; (i & 0x80) == 0; --i)
       ow_save_buffer[i] = ow_level_tile_settings[i];
     flag_show_save_prompt = 0;
-    pointer_display_overworld_prompt = 5;
+    if (flag_skip_save_prompt) {
+      SaveGame();
+      flag_skip_save_prompt = false;
+    } else {
+      pointer_display_overworld_prompt = 5;
+    }
   }
 }
 
