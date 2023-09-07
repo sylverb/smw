@@ -31,15 +31,26 @@
 
 #include "assets/smw_assets.h"
 
+typedef struct GamepadInfo {
+  uint32 modifiers;
+  SDL_JoystickID joystick_id;
+  uint8 index;
+  uint8 axis_buttons;
+  uint16 last_cmd[kGamepadBtn_Count];
+  Sint16 last_axis_x, last_axis_y;
+} GamepadInfo;
+
+
 static void SDLCALL AudioCallback(void *userdata, Uint8 *stream, int len);
 static void LoadAssets();
 static void SwitchDirectory();
 static void RenderNumber(uint8 *dst, size_t pitch, int n, uint8 big);
 static void OpenOneGamepad(int i);
+static uint32 GetActiveControllers(void);
 static void HandleVolumeAdjustment(int volume_adjustment);
-static void HandleGamepadAxisInput(int gamepad_id, int axis, int value);
+static void HandleGamepadAxisInput(GamepadInfo *gi, int axis, Sint16 value);
 static int RemapSdlButton(int button);
-static void HandleGamepadInput(int button, bool pressed);
+static void HandleGamepadInput(GamepadInfo *gi, int button, bool pressed);
 static void HandleInput(int keyCode, int keyMod, bool pressed);
 static void HandleCommand(uint32 j, bool pressed);
 void OpenGLRenderer_Create(struct RendererFuncs *funcs);
@@ -49,7 +60,6 @@ bool g_want_dump_memmap_flags;
 bool g_new_ppu = true;
 bool g_other_image = true;
 struct SpcPlayer *g_spc_player;
-static uint32_t button_state;
 
 static uint8_t g_pixels[256 * 4 * 240];
 static uint8_t g_my_pixels[256 * 4 * 240];
@@ -70,16 +80,16 @@ static SDL_Window *g_window;
 
 static uint8 g_paused, g_turbo, g_replay_turbo = true, g_cursor = true;
 static uint8 g_current_window_scale;
-static uint8 g_gamepad_buttons;
-static int g_input1_state;
+static uint32 g_input_state;
 static bool g_display_perf;
 static int g_curr_fps;
 static int g_ppu_render_flags = 0;
 static int g_snes_width, g_snes_height;
 static int g_sdl_audio_mixer_volume = SDL_MIX_MAXVOLUME;
 static struct RendererFuncs g_renderer_funcs;
-static uint32 g_gamepad_modifiers;
-static uint16 g_gamepad_last_cmd[kGamepadBtn_Count];
+
+static GamepadInfo g_gamepad[2];
+
 extern Snes *g_snes;
 
 void NORETURN Die(const char *error) {
@@ -93,6 +103,10 @@ void Warning(const char *error) {
   fprintf(stderr, "Warning: %s\n", error);
 }
 
+static GamepadInfo *GetGamepadInfo(SDL_JoystickID id) {
+  return (g_gamepad[0].joystick_id == id) ? &g_gamepad[0] :
+    (g_gamepad[1].joystick_id == id) ? &g_gamepad[1] : NULL;
+}
 
 void ChangeWindowScale(int scale_step) {
   if ((SDL_GetWindowFlags(g_window) & (SDL_WINDOW_FULLSCREEN_DESKTOP | SDL_WINDOW_FULLSCREEN | SDL_WINDOW_MINIMIZED | SDL_WINDOW_MAXIMIZED)) != 0)
@@ -340,6 +354,7 @@ int main(int argc, char** argv) {
 
   LoadAssets();
 
+  g_gamepad[0].joystick_id = g_gamepad[1].joystick_id = -1;
   g_snes_width = (g_config.extended_aspect_ratio * 2 + 256);
   g_snes_height = 224;// (g_config.extend_y ? 240 : 224);
   g_ppu_render_flags = g_config.new_renderer * kPpuRenderFlags_NewRenderer |
@@ -366,6 +381,8 @@ int main(int argc, char** argv) {
   // audio_samples: power of 2
   if (g_config.audio_samples <= 0 || ((g_config.audio_samples & (g_config.audio_samples - 1)) != 0))
     g_config.audio_samples = kDefaultSamples;
+
+  SDL_SetHint(SDL_HINT_JOYSTICK_ALLOW_BACKGROUND_EVENTS, "1");
 
   // set up SDL
   if(SDL_Init(SDL_INIT_VIDEO | SDL_INIT_AUDIO | SDL_INIT_GAMECONTROLLER) != 0) {
@@ -466,6 +483,7 @@ error_reading:;
   uint32 frameCtr = 0;
   uint8 audiopaused = true;
   bool has_bug_in_title = false;
+  GamepadInfo *gi;
 
   while (running) {
     SDL_Event event;
@@ -475,14 +493,26 @@ error_reading:;
       case SDL_CONTROLLERDEVICEADDED:
         OpenOneGamepad(event.cdevice.which);
         break;
+      case SDL_CONTROLLERDEVICEREMOVED:
+        gi = GetGamepadInfo(event.cdevice.which);
+        if (gi) {
+          memset(gi, 0, sizeof(GamepadInfo));
+          gi->joystick_id = -1;
+        }
+        break;
       case SDL_CONTROLLERAXISMOTION:
-        HandleGamepadAxisInput(event.caxis.which, event.caxis.axis, event.caxis.value);
+        gi = GetGamepadInfo(event.caxis.which);
+        if (gi)
+          HandleGamepadAxisInput(gi, event.caxis.axis, event.caxis.value);
         break;
       case SDL_CONTROLLERBUTTONDOWN:
       case SDL_CONTROLLERBUTTONUP: {
-        int b = RemapSdlButton(event.cbutton.button);
-        if (b >= 0)
-          HandleGamepadInput(b, event.type == SDL_CONTROLLERBUTTONDOWN);
+        gi = GetGamepadInfo(event.cbutton.which);
+        if (gi) {
+          int b = RemapSdlButton(event.cbutton.button);
+          if (b >= 0)
+            HandleGamepadInput(gi, b, event.type == SDL_CONTROLLERBUTTONDOWN);
+        }
         break;
       }
       case SDL_MOUSEWHEEL:
@@ -521,12 +551,12 @@ error_reading:;
     }
 
     // Clear gamepad inputs when joypad directional inputs to avoid wonkiness
-    int inputs = g_input1_state;
-    if (g_input1_state & 0xf0)
-      g_gamepad_buttons = 0;
-    inputs |= g_gamepad_buttons;
-
-    uint8 is_replay = RtlRunFrame(inputs);
+    if (g_input_state & 0xf0)
+      g_gamepad[0].axis_buttons = 0;
+    if (g_input_state & 0xf0000)
+      g_gamepad[1].axis_buttons = 0;
+    uint32 inputs = g_input_state | g_gamepad[0].axis_buttons | g_gamepad[1].axis_buttons << 12;
+    uint8 is_replay = RtlRunFrame(inputs | GetActiveControllers());
 
     frameCtr++;
     g_snes->disableRender = (g_turbo ^ (is_replay & g_replay_turbo)) && (frameCtr & (g_turbo ? 0xf : 0x7f)) != 0;
@@ -634,12 +664,19 @@ static void RenderNumber(uint8 *dst, size_t pitch, int n, uint8 big) {
 }
 
 static void HandleCommand(uint32 j, bool pressed) {
+  static const uint8 kKbdRemap[] = { 4, 5, 6, 7, 2, 3, 8, 0, 9, 1, 10, 11 };
+  if (j < kKeys_Controls)
+    return;
+
   if (j <= kKeys_Controls_Last) {
-    static const uint8 kKbdRemap[] = { 0, 4, 5, 6, 7, 2, 3, 8, 0, 9, 1, 10, 11 };
-    if (pressed)
-      g_input1_state |= 1 << kKbdRemap[j];
-    else
-      g_input1_state &= ~(1 << kKbdRemap[j]);
+    uint32 m = 1 << kKbdRemap[j - kKeys_Controls];
+    g_input_state = pressed ? (g_input_state | m) : (g_input_state & ~m);
+    return;
+  }
+
+  if (j <= kKeys_ControlsP2_Last) {
+    uint32 m = 0x1000 << kKbdRemap[j - kKeys_ControlsP2];
+    g_input_state = pressed ? (g_input_state | m) : (g_input_state & ~m);
     return;
   }
 
@@ -715,11 +752,43 @@ static void HandleInput(int keyCode, int keyMod, bool pressed) {
     HandleCommand(j, pressed);
 }
 
+static uint32 GetActiveControllers() {
+  uint32 ctrl = g_config.has_keyboard_controls;
+  ctrl |= g_gamepad[0].joystick_id != -1 ? 1 : 0;
+  ctrl |= g_gamepad[1].joystick_id != -1 ? 2 : 0;
+  return ctrl << 30;
+}
+
 static void OpenOneGamepad(int i) {
   if (SDL_IsGameController(i)) {
     SDL_GameController *controller = SDL_GameControllerOpen(i);
-    if (!controller)
+    if (!controller) {
       fprintf(stderr, "Could not open gamepad %d: %s\n", i, SDL_GetError());
+      return;
+    }
+
+    uint32 joystick_id = SDL_JoystickInstanceID(SDL_GameControllerGetJoystick(controller));
+    if (GetGamepadInfo(joystick_id))
+      return;
+
+    uint8 scan_order[3] = { SDL_GameControllerGetPlayerIndex(controller), 0, 1 };
+
+    int found_idx = -1;
+    for (int i = 0; i < 3; i++) {
+      uint8 j = scan_order[i];
+      if (j < 2 && g_config.enable_gamepad[j] && (i == 0 || g_gamepad[j].joystick_id == -1)) {
+        found_idx = j;
+        break;
+      }
+    }
+
+    printf("Found controller '%s' assigning to player %d\n", SDL_GameControllerName(controller), found_idx + 1);
+    if (found_idx >= 0) {
+      GamepadInfo *gi = &g_gamepad[found_idx];
+      memset(gi, 0, sizeof(GamepadInfo));
+      gi->index = found_idx;
+      gi->joystick_id = joystick_id;
+    }
   }
 }
 
@@ -744,14 +813,14 @@ static int RemapSdlButton(int button) {
   }
 }
 
-static void HandleGamepadInput(int button, bool pressed) {
-  if (!!(g_gamepad_modifiers & (1 << button)) == pressed)
+static void HandleGamepadInput(GamepadInfo *gi, int button, bool pressed) {
+  if (!!(gi->modifiers & (1 << button)) == pressed)
     return;
-  g_gamepad_modifiers ^= 1 << button;
+  gi->modifiers ^= 1 << button;
   if (pressed)
-    g_gamepad_last_cmd[button] = FindCmdForGamepadButton(button, g_gamepad_modifiers);
-  if (g_gamepad_last_cmd[button] != 0)
-    HandleCommand(g_gamepad_last_cmd[button], pressed);
+    gi->last_cmd[button] = FindCmdForGamepadButton(button + gi->index * kGamepadBtn_Count, gi->modifiers);
+  if (gi->last_cmd[button] != 0)
+    HandleCommand(gi->last_cmd[button], pressed);
 }
 
 static void HandleVolumeAdjustment(int volume_adjustment) {
@@ -787,19 +856,11 @@ static float ApproximateAtan2(float y, float x) {
   return q + *(float *)&uatan_2q;
 }
 
-static void HandleGamepadAxisInput(int gamepad_id, int axis, int value) {
-  static int last_gamepad_id, last_x, last_y;
+static void HandleGamepadAxisInput(GamepadInfo *gi, int axis, Sint16 value) {
   if (axis == SDL_CONTROLLER_AXIS_LEFTX || axis == SDL_CONTROLLER_AXIS_LEFTY) {
-    // ignore other gamepads unless they have a big input
-    if (last_gamepad_id != gamepad_id) {
-      if (value > -16000 && value < 16000)
-        return;
-      last_gamepad_id = gamepad_id;
-      last_x = last_y = 0;
-    }
-    *(axis == SDL_CONTROLLER_AXIS_LEFTX ? &last_x : &last_y) = value;
+    *(axis == SDL_CONTROLLER_AXIS_LEFTX ? &gi->last_axis_x : &gi->last_axis_y) = value;
     int buttons = 0;
-    if (last_x * last_x + last_y * last_y >= 10000 * 10000) {
+    if (gi->last_axis_x * gi->last_axis_x + gi->last_axis_y * gi->last_axis_y >= 10000 * 10000) {
       // in the non deadzone part, divide the circle into eight 45 degree
       // segments rotated by 22.5 degrees that control which direction to move.
       // todo: do this without floats?
@@ -813,33 +874,61 @@ static void HandleGamepadAxisInput(int gamepad_id, int axis, int value) {
         1 << 6,           // 6 = left
         1 << 6 | 1 << 4,  // 7 = left, up
       };
-      uint8 angle = (uint8)(int)(ApproximateAtan2(last_y, last_x) * 64.0f + 0.5f);
+      uint8 angle = (uint8)(int)(ApproximateAtan2(gi->last_axis_y, gi->last_axis_x) * 64.0f + 0.5f);
       buttons = kSegmentToButtons[(uint8)(angle + 16 + 64) >> 5];
     }
-    g_gamepad_buttons = buttons;
+    gi->axis_buttons = buttons;
   } else if ((axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT || axis == SDL_CONTROLLER_AXIS_TRIGGERRIGHT)) {
     if (value < 12000 || value >= 16000)  // hysteresis
-      HandleGamepadInput(axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT ? kGamepadBtn_L2 : kGamepadBtn_R2, value >= 12000);
+      HandleGamepadInput(gi, axis == SDL_CONTROLLER_AXIS_TRIGGERLEFT ? kGamepadBtn_L2 : kGamepadBtn_R2, value >= 12000);
   }
 }
 
 const uint8 *g_asset_ptrs[kNumberOfAssets];
 uint32 g_asset_sizes[kNumberOfAssets];
 
-static void LoadAssets() {
-  size_t length = 0;
-  uint8 *data = ReadWholeFile("assets/smw_assets.dat", &length);
-  if (!data)
-    data = ReadWholeFile("smw_assets.dat", &length);
-  if (!data) Die("Failed to read smw_assets.dat. Please see the README for information about how you get this file.");
-
+static bool VerifyAssetsFile(const uint8 *data, size_t length) {
   static const char kAssetsSig[] = { kAssets_Sig };
-
   if (length < 16 + 32 + 32 + 8 + kNumberOfAssets * 4 ||
     memcmp(data, kAssetsSig, 48) != 0 ||
-    *(uint32*)(data + 80) != kNumberOfAssets)
-    Die("Invalid assets file");
+    *(uint32 *)(data + 80) != kNumberOfAssets)
+    return false;
+  return true;
+}
 
+static const char *kAssetFileCandidates[] = {
+  "smw_assets.dat",
+  "assets/smw_assets.dat"
+};
+
+static void LoadAssets() {
+  size_t length = 0;
+  uint8 *data = NULL;
+  for (int i = 0; i < 2 && data == NULL; i++)
+    data = ReadWholeFile(kAssetFileCandidates[i], &length);
+
+  if (!data) {
+    size_t bps_length, bps_src_length;
+    uint8 *bps, *bps_src;
+
+    bps = ReadWholeFile("smw_assets.bps", &bps_length);
+    if (!bps)
+      Die("Failed to read smw_assets.dat. Please see the README for information about how you get this file.");
+    
+    bps_src = ReadWholeFile("smw.sfc", &bps_src_length);
+    if (!bps_src)
+      Die("Missing file: smw.sfc");
+    if (bps_src_length != 524288)
+      Die("smw.sfc needs to be the unheadered ROM");
+
+    data = ApplyBps(bps_src, bps_src_length, bps, bps_length, &length);
+    if (!data)
+      Die("Unable to apply smw_assets.bps");
+  }
+
+  if (!VerifyAssetsFile(data, length))
+    Die("Mismatching assets file - Please re run 'python assets/restool.py'");
+    
   uint32 offset = 88 + kNumberOfAssets * 4 + *(uint32 *)(data + 84);
 
   for (size_t i = 0; i < kNumberOfAssets; i++) {
@@ -855,6 +944,10 @@ static void LoadAssets() {
 
 MemBlk FindInAssetArray(int asset, int idx) {
   return FindIndexInMemblk((MemBlk) { g_asset_ptrs[asset], g_asset_sizes[asset] }, idx);
+}
+
+const uint8 *FindPtrInAsset(int asset, uint32 addr) {
+  return FindAddrInMemblk((MemBlk){g_asset_ptrs[asset], g_asset_sizes[asset]}, addr);
 }
 
 // Go some steps up and find smw.ini

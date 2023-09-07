@@ -12,7 +12,6 @@
 #include "dma.h"
 #include "ppu.h"
 #include "cart.h"
-#include "input.h"
 #include "../tracing.h"
 #include "../variables.h"
 #include "../common_rtl.h"
@@ -42,8 +41,8 @@ Snes* snes_init(uint8_t *ram) {
   snes->dma = dma_init(snes);
   snes->ppu = ppu_init();
   snes->cart = cart_init(snes);
-  snes->input1 = input_init(snes);
-  snes->input2 = input_init(snes);
+  snes->input1_currentState = 0;
+  snes->input2_currentState = 0;
   return snes;
 }
 
@@ -53,8 +52,6 @@ void snes_free(Snes* snes) {
   dma_free(snes->dma);
   ppu_free(snes->ppu);
   cart_free(snes->cart);
-  input_free(snes->input1);
-  input_free(snes->input2);
   //free(snes);
 }
 
@@ -79,8 +76,6 @@ void snes_reset(Snes* snes, bool hard) {
   apu_reset(snes->apu);
   dma_reset(snes->dma);
   ppu_reset(snes->ppu);
-  input_reset(snes->input1);
-  input_reset(snes->input2);
   if (hard)
     memset(snes->ram, 0, 0x20000);
   snes->ramAdr = 0;
@@ -108,19 +103,6 @@ void snes_reset(Snes* snes, bool hard) {
   snes->divideResult = 0x101;
   snes->fastMem = false;
   snes->openBus = 0;
-}
-
-void snes_runFrame(Snes *snes) {
-  snes_frame_counter++;
-
-  bool old = true;
-  for (;;) {
-    snes_runCycle(snes);
-    if (snes->inVblank != 0 && snes->inVblank != old) {
-      break;
-    }
-    old = snes->inVblank;
-  }
 }
 
 void snes_handle_pos_stuff(Snes *snes) {
@@ -197,20 +179,7 @@ void snes_handle_pos_stuff(Snes *snes) {
   }
 }
 
-void snes_runCycle(Snes* snes) {
-  snes->apuCatchupCycles += apuCyclesPerMaster * 2.0;
-
-  input_cycle(snes->input1);
-  input_cycle(snes->input2);
-
-  // if not in dram refresh, if we are busy with hdma/dma, do that, else do cpu cycle
-  if (snes->hPos < 536 || snes->hPos >= 576) {
-    snes_runCpu(snes);
-  }
-
-  snes_handle_pos_stuff(snes);
- }
-#define IS_ADR(x) (x == 0xffffff)
+#define IS_ADR(x) (x == 0xfffff)
 
 void snes_runCpu(Snes *snes) {
   uint32_t pc = snes->cpu->k << 16 | snes->cpu->pc;
@@ -327,13 +296,15 @@ static uint8_t snes_readReg(Snes* snes, uint16_t adr) {
     case 0x4217:
       return snes->multiplyResult >> 8;
     case 0x4218:
-      return SwapInputBits(snes->input1->currentState) & 0xff;
+      return SwapInputBits(snes->input1_currentState) & 0xff;
     case 0x4219:
-      return SwapInputBits(snes->input1->currentState) >> 8;
+      return SwapInputBits(snes->input1_currentState) >> 8;
     case 0x421a:
+      return SwapInputBits(snes->input2_currentState) & 0xff;
+    case 0x421b:
+      return SwapInputBits(snes->input2_currentState) >> 8;
     case 0x421c:
     case 0x421e:
-    case 0x421b:
     case 0x421d:
     case 0x421f:
       return 0;
@@ -451,7 +422,8 @@ uint8_t snes_read(Snes* snes, uint32_t adr) {
       return snes_readBBus(snes, adr & 0xff); // B-bus
     }
     if (adr == 0x4016 || adr == 0x4017) {
-      return input_read(snes->input1) | (snes->openBus & 0xfc);
+      // joypad read disabled
+      return 0;
     }
     if(adr >= 0x4200 && adr < 0x4220 || adr >= 0x4218 && adr < 0x4220) {
       return snes_readReg(snes, adr); // internal registers

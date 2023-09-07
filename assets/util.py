@@ -16,9 +16,9 @@ SMW_SHA1 = {
    SMW_SHA1_US : ('us', 'Super Mario World (USA)'),
 }
 
-def load_rom(filename, support_multilanguage = False):
+def load_rom(filename, disable_hash_check = False, rom_hack = None):
   global ROM
-  ROM = LoadedRom(filename, support_multilanguage)
+  ROM = LoadedRom(filename, disable_hash_check, rom_hack)
   return ROM
 
 def get_byte(addr):
@@ -48,11 +48,50 @@ def get_int16(ea):
 def get_word(addr):
   return ROM.get_word(addr)
 
+kHackInfo = {
+  'enhanced' : ('Super Mario World Enhanced.ips', '2882a39ac64b597e9260e92aaba610d0b6f03adb', 'Super Mario World Enhanced.bsdiff', '5a53369916fd728033d16db3abceb487900f903a', 'ebe23d8a26759ba1b5c2f4d6d8f8db3ab88e902f'),
+  'redrawn' : ('smw_redrawn.ips', '7168df51ba025a12177ce00e88540c1341ef3efc', 'smw_redrawn.bsdiff', '13b658e626020aa35dca4e1c3648c6a6d8afa901', '50702ffc8c2e7115c9ba0c80c8ec40da5a487651'),
+  'nsmb' : ('SMW with Levels from NSMB.bps', '4277edf003340021ce4e68fe2278d1d73f4d798c', 'SMW with Levels from NSMB.bsdiff', 'e2d2487324374aea1d67a6aa6b3b47f8b3e6727c', '877e9c6fce29e80e4c52892120af06748550487a'),
+  'return_dino_land' : ('Return to Dinosaur Land.bps', 'e9a891ecd0f6f43a4592487ca2590311be00396d', 'Return to Dinosaur Land.bsdiff', 'ad2ebd7b416cbfd3cd7cac833b0ca7f690b9144b', '1d03777086f3c86b1693f9ce2411f560813732a8')
+}
+kModsPath = os.path.join(DEFAULT_ROM_DIRECTORY, '../smw_hacks/mods')
+
+def get_hack_variants():
+  return ", ".join(kHackInfo.keys())
+
+def get_hacked_variant(org_rom, hack):
+  if not os.path.exists(kModsPath):
+    raise Exception('\n\nERROR: You need to run: git clone https://github.com/snesrev/smw_hacks.git')
+  try:
+    import bsdiff4
+  except:
+    raise Exception('\n\nERROR: You need to run pip install bsdiff4')
+  if hack not in kHackInfo:
+    raise Excepion(f'{hack} is not a valid hack variant. Valid values {get_hack_variants()}')
+  if hashlib.sha1(org_rom).hexdigest() != SMW_SHA1_US.lower():
+    raise Exception(f'Input to the differ must be the original SMW rom with hash {SMW_SHA1_US}')
+
+  ips_name, ips_hash, diff_name, diff_hash, patched_hash = kHackInfo[hack]
+  ips = open(os.path.join(kModsPath, ips_name), 'rb').read()
+  if hashlib.sha1(ips).hexdigest() != ips_hash:
+    raise Exception(f'{ips_name} has wrong hash. Expecting {ips_hash}')
+
+  diff = open(os.path.join(kModsPath, diff_name), 'rb').read()
+  if hashlib.sha1(diff).hexdigest() != diff_hash:
+    raise Exception(f'{diff_name} has wrong hash. Expecting {diff_hash}')
+  patched = bsdiff4.patch(ips + org_rom, diff)
+  patched_hash_cur = hashlib.sha1(patched).hexdigest()
+  if patched_hash_cur != patched_hash:
+    raise Exception(f'Patched file has wrong hash. Expecting {patched_hash} got {patched_hash_cur}')
+  return patched
 
 class LoadedRom:
-  def __init__(self, path = None, support_multilanguage = False):
-    rom_path = self.__get_rom_path(path)
-    self.ROM = open(rom_path, 'rb').read()
+  def __init__(self, path = None, disable_hash_check = False, rom_hack = None):
+    self.ROM = open(self.__get_rom_path(path), 'rb').read()
+
+    if rom_hack != None:
+      self.ROM = get_hacked_variant(self.ROM, rom_hack)
+      disable_hash_check = True
 
     # Remove the SMC header?
     if (len(self.ROM) & 0xfffff) == 0x200:
@@ -62,16 +101,8 @@ class LoadedRom:
     entry = SMW_SHA1.get(hash)
     self.language = entry[0] if entry != None else None
 
-    if support_multilanguage:
-      if self.language == None:
-        msg = f"\n\nROM with hash {hash} not supported.\n\nYou need one of the following ROMs to extract the resources:\n"
-        for k, v in SMW_SHA1.items():
-          msg += '%5s: %s: %s\n' % (v[0], k, v[1])
-        raise Exception(msg)
-      print('Identified ROM as: %s - "%s"' % entry)
-    else:
-      if self.language != 'us':
-        raise Exception(f"\n\nROM with hash {hash} not supported.\n\nExpected {SMW_SHA1_US}.\nPlease verify your ROM is \"Super Mario World\"");
+    if not disable_hash_check and self.language != 'us':
+      raise Exception(f"\n\nROM with hash {hash} not supported.\n\nExpected {SMW_SHA1_US}.\nPlease verify your ROM is \"Super Mario World\".\n\nIf you want to use a LunarMagic edited rom you can run restool with -f to bypass this check.");
 
   def get_byte(self, ea):
     assert (ea & 0x8000)
