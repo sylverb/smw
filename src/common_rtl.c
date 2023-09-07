@@ -65,8 +65,8 @@ static void SaveSnesState(SaveLoadInfo *sli) {
 }
 
 static size_t InternalSaveLoadSize() {
-  // 268708 bytes
-  return 27 + 0x10000 + 40 + 3024 + 15 + 224 + 8 + 64 + 66592 + 2048 + 54 + 0x20000 + 4;
+  // 268712 bytes
+  return 27 + 0x10000 + 40 + 3024 + 15 + 224 + 8 + 64 + 66592 + 2048 + 58 + 0x20000 + 4;
 }
 
 typedef struct StateRecorder {
