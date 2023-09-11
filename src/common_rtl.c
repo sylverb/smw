@@ -398,6 +398,7 @@ void StateRecorder_Load(uint8* slot_addr) {
   LoadFuncState state = { {&loadFunc }, slot_addr + sizeof(size_t), slot_addr + sizeof(size_t), slot_addr + sizeof(size_t) + size };
   LoadSnesState(&state.base);
   assert(state.p == state.pend);
+  RtlRestoreMusicAfterLoad_Locked(false);
 }
 
 void StateRecorder_Save(uint8* slot_addr) {
