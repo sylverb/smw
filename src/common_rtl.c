@@ -489,6 +489,14 @@ void RtlSaveSnapshot(/*const char *filename, bool saving_with_bug*/ uint8* slot_
 static void RtlLoadFromFile(/*FILE *f, bool replay*/ uint8* slot) {
   //RtlApuLock();
 
+  // Sanity-check savestate
+  size_t expectedSavestateSize = InternalSaveLoadSize();
+  size_t actualSavestateSize = *((size_t*)slot);
+  if (expectedSavestateSize != actualSavestateSize) {
+		printf("RtlLoadFromFile: Invalid state save size, expected=0x%08x actual=0x%08x\n", expectedSavestateSize, actualSavestateSize);
+		return;
+  }
+
   StateRecorder_Load(/*&state_recorder, f, replay*/ slot);
   ppu_copy(g_my_ppu, g_snes->ppu);
 
