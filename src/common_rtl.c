@@ -397,6 +397,12 @@ void StateRecorder_Load(uint8* slot_addr) {
   size_t size;
   readSaveStateInitImpl();
   readSaveStateImpl(&size, sizeof(size_t));
+  // Sanity-check savestate
+  size_t expectedSavestateSize = InternalSaveLoadSize();
+  if (expectedSavestateSize != size) {
+		printf("StateRecorder_Load: Invalid state save size, expected=0x%08x actual=0x%08x\n", expectedSavestateSize, size);
+		return;
+  }
   LoadFuncState state = { {&loadFunc }, slot_addr + sizeof(size_t), slot_addr + sizeof(size_t), slot_addr + sizeof(size_t) + size };
   LoadSnesState(&state.base);
   readSaveStateFinalizeImpl();
@@ -491,14 +497,6 @@ void RtlSaveSnapshot(/*const char *filename, bool saving_with_bug*/ uint8* slot_
 
 static void RtlLoadFromFile(/*FILE *f, bool replay*/ uint8* slot) {
   //RtlApuLock();
-
-  // Sanity-check savestate
-//  size_t expectedSavestateSize = InternalSaveLoadSize();
-//  size_t actualSavestateSize = *((size_t*)slot);
-//  if (expectedSavestateSize != actualSavestateSize) {
-//		printf("RtlLoadFromFile: Invalid state save size, expected=0x%08x actual=0x%08x\n", expectedSavestateSize, actualSavestateSize);
-//		return;
-//  }
 
   StateRecorder_Load(/*&state_recorder, f, replay*/ slot);
   ppu_copy(g_my_ppu, g_snes->ppu);
