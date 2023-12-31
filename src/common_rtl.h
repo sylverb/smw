@@ -127,6 +127,7 @@ bool RtlRunFrame(uint32 inputs);
 void RtlReadSram();
 void RtlWriteSram();
 
+uint8_t *RtlGetSram();
 
 extern void readSramImpl(uint8_t* sram);
 extern void writeSramImpl(uint8_t* sram);

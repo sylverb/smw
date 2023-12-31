@@ -821,21 +821,14 @@ void RtlCheat(char c) {
 }
 
 void RtlReadSram(void) {
-  /*char filename[64];
-  snprintf(filename, sizeof(filename), "saves/%s.srm", g_rtl_game_info->title);
-  FILE *f = fopen(filename, "rb");
-  if (f) {
-    if (fread(g_sram, 1, g_sram_size, f) != g_sram_size)
-      fprintf(stderr, "Error reading %s\n", filename);
-    fclose(f);*/
-    readSramImpl(g_sram);
-    /*ByteArray_Resize(&state_recorder.base_snapshot, g_sram_size);
-    memcpy(state_recorder.base_snapshot.data, g_sram, g_sram_size);
-  }*/
+}
+
+uint8_t *RtlGetSram() {
+  return g_sram;
 }
 
 void RtlWriteSram(void) {
-  writeSramImpl(g_sram);  // FIXME g_sram is NULL ??? --> no, g_static_ram
+//  writeSramImpl(g_sram);  // FIXME g_sram is NULL ??? --> no, g_static_ram
   /*char filename[64], filename_bak[64];
   snprintf(filename, sizeof(filename), "saves/%s.srm", g_rtl_game_info->title);
   snprintf(filename_bak, sizeof(filename_bak), "saves/%s.srm.bak", g_rtl_game_info->title);
