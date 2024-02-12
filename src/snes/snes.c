@@ -72,7 +72,7 @@ void snes_saveload(Snes *snes, SaveLoadInfo *sli) {
 
 void snes_reset(Snes* snes, bool hard) {
   cart_reset(snes->cart); // reset cart first, because resetting cpu will read from it (reset vector)
-  cpu_reset(snes->cpu);
+  //cpu_reset(snes->cpu);
   apu_reset(snes->apu);
   dma_reset(snes->dma);
   ppu_reset(snes->ppu);

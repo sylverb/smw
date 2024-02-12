@@ -162,8 +162,8 @@ void RtlReset(int mode) {
   RtlRestoreMusicAfterLoad_Locked(true);
   RtlApuUnlock();
 
-  if ((mode & 2) == 0)
-    StateRecorder_Init(&state_recorder);
+  //if ((mode & 2) == 0)
+  //  StateRecorder_Init(&state_recorder);
 }
 
 int GetFileSize(FILE *f) {
