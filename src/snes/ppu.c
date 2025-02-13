@@ -6,6 +6,7 @@
 #include <stdint.h>
 #include <stdbool.h>
 #include <stddef.h>
+#include "gw_malloc.h"
 
 #include "snes.h"
 #include "snes_regs.h"
@@ -19,11 +20,19 @@ static bool ppu_evaluateSprites(Ppu* ppu, int line);
 static uint16_t ppu_getVramRemap(Ppu* ppu);
 
 static Ppu g_static_ppu;
+static bool ppu_init_done = false;
 
 Ppu* ppu_init(void) {
+  printf("ppu_init\n");
   // Static allocation
-  Ppu* ppu = &g_static_ppu;  //malloc(sizeof(Ppu));
-  return ppu;
+  if (!ppu_init_done) {
+    ppu_init_done = true;
+    Ppu* ppu = &g_static_ppu;  //malloc(sizeof(Ppu));
+    memset(ppu, 0, sizeof(*ppu));
+    ppu->vram = (uint16_t *)itc_calloc(1, 0x10000); // 64KB of VRAM in ITC RAM
+    printf("ppu->vram = %p\n", ppu->vram);
+  }
+  return &g_static_ppu;
 }
 
 void ppu_free(Ppu* ppu) {
@@ -42,7 +51,10 @@ void ppu_reset(Ppu* ppu) {
   {
     size_t pitch = ppu->renderPitch;
     uint8_t *renderBuffer = ppu->renderBuffer;
+    uint16_t *vram = ppu->vram;
+    memset(vram, 0, 0x10000);
     memset(ppu, 0, sizeof(*ppu));
+    ppu->vram = vram;
     ppu->renderBuffer = renderBuffer;
     ppu->renderPitch = (uint32_t)pitch;
   }
@@ -51,11 +63,12 @@ void ppu_reset(Ppu* ppu) {
 
 void ppu_saveload(Ppu *ppu, SaveLoadInfo *sli) {
   assert(offsetof(Ppu, cgwsel) + 1 - offsetof(Ppu, inidisp) == PPU_SAVESTATE_REGS_SIZE);
-  assert(offsetof(Ppu, vram) + 0x10000 - offsetof(Ppu, cgram) == PPU_SAVESTATE_MEM_SIZE);
+  assert(offsetof(Ppu, highOam) + 0x20 - offsetof(Ppu, cgram) == PPU_SAVESTATE_MEM_SIZE);
   uint32 version[2] = {'P' | 'P' << 8 | 'U' << 16 | '0' << 24, PPU_SAVESTATE_REGS_SIZE + PPU_SAVESTATE_MEM_SIZE};
   sli->func(sli, version, 8);
   sli->func(sli, &ppu->inidisp, PPU_SAVESTATE_REGS_SIZE);
   sli->func(sli, &ppu->cgram, PPU_SAVESTATE_MEM_SIZE);
+  sli->func(sli, ppu->vram, PPU_SAVESTATE_VRAM_SIZE);
 }
 
 void PpuBeginDrawing(Ppu *ppu, uint8_t *pixels, size_t pitch, uint32_t render_flags) {

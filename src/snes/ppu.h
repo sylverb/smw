@@ -62,7 +62,8 @@ typedef struct WindowLayer {
 } WindowLayer;
 
 #define PPU_SAVESTATE_REGS_SIZE 0x40
-#define PPU_SAVESTATE_MEM_SIZE 0x10420
+#define PPU_SAVESTATE_MEM_SIZE 0x420
+#define PPU_SAVESTATE_VRAM_SIZE 0x10000
 
 struct Ppu {
   // Snes registers. Saved to snapshot. Need to be stable
@@ -145,11 +146,11 @@ struct Ppu {
 
   void *pad2;
 
-  // -- START OF SNAPSHOT, 0x10420 bytes
+  uint16_t *vram;
+  // -- START OF SNAPSHOT, 0x420 bytes
   uint16_t cgram[0x100];
   uint16_t oam[0x100];
   uint8_t highOam[0x20];
-  uint16_t vram[0x8000];
   // -- END OF SNAPSHOT
 
 
