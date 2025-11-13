@@ -404,7 +404,7 @@ void StateRecorder_Load(uint8* slot_addr) {
 void StateRecorder_Save(uint8* slot_addr) {
   size_t savestateSize = InternalSaveLoadSize();
   writeSaveStateInitImpl();
-  writeSaveStateImpl(&savestateSize, sizeof(size_t));
+  writeSaveStateImpl((uint8*)&savestateSize, sizeof(size_t));
   SaveFuncState savest = { {&saveFunc} };
   SaveSnesState(&savest.base);
   writeSaveStateFinalizeImpl();
@@ -415,7 +415,7 @@ void RtlClearKeyLog(void) {
 }
 
 void RtlStopReplay(void) {
-  StateRecorder_StopReplay(&state_recorder);
+//  StateRecorder_StopReplay(&state_recorder);
 }
 
 bool RtlRunFrame(uint32 inputs) {

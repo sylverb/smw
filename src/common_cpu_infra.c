@@ -284,7 +284,7 @@ Snes *SnesInit(const uint8 *data, int data_size) {
     g_runmode = RM_MINE;
     g_snes->cart->ramSize = 2048;
     // Static allocation
-    g_snes->cart->ram = &g_static_ram;  //calloc(1, 2048);
+    g_snes->cart->ram = (uint8*)&g_static_ram;  //calloc(1, 2048);
     g_rtl_game_info = &kSmwGameInfo;
     g_rtl_game_info->initialize();
     ppu_reset(g_snes->ppu);
