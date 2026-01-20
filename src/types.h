@@ -42,7 +42,7 @@ typedef uint16 VoidP;
 #else
 #define countof(a) (sizeof(a)/sizeof(*(a)))
 #define NORETURN
-#define FORCEINLINE inline
+#define FORCEINLINE inline __attribute__((always_inline))
 #define NOINLINE
 #endif
 
