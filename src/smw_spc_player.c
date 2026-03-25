@@ -250,7 +250,7 @@ static void CalcTremolo(SmwSpcPlayer *p, Channel *c);
 static void HandlePanAndSweep(SmwSpcPlayer *p, Channel *c);
 static void CalcFinalVolume(SmwSpcPlayer *p, Channel *c, uint8 vol);
 
-static void Dsp_Write(SmwSpcPlayer *p, uint8_t reg, uint8 value) {
+static FORCEINLINE void Dsp_Write(SmwSpcPlayer *p, uint8_t reg, uint8 value) {
   /*DspRegWriteHistory *hist = p->reg_write_history;
   if (hist) {
     if (hist->count < 256) {
@@ -268,7 +268,7 @@ static void Not_Implemented(void) {
   printf("Not Implemented\n");
 }
 
-static uint16 SpcDivHelper(int a, uint8 b) {
+static FORCEINLINE uint16 SpcDivHelper(int a, uint8 b) {
   int org_a = a;
   if (a & 0x100)
     a = -a;
@@ -392,7 +392,7 @@ static void PlayNote(SmwSpcPlayer *p, Channel *c, uint8 note) {
   WritePitch(p, c, c->pitch);
 }
 
-static uint16 ComputePeriod(uint8 v) {
+static FORCEINLINE uint16 ComputePeriod(uint8 v) {
   static const uint16 kBaseNoteFreqs[] = { 4286, 4541, 4811, 5097, 5400, 5721, 6061, 6422, 6804, 7208, 7637, 8091 };
   uint8 pp = v & 0x7f;
   uint8 q = pp / 12, r = pp % 12;
@@ -402,7 +402,7 @@ static uint16 ComputePeriod(uint8 v) {
   return t;
 }
 
-static void WritePitch(SmwSpcPlayer *p, Channel *c, uint16 pitch) {
+static FORCEINLINE void WritePitch(SmwSpcPlayer *p, Channel *c, uint16 pitch) {
   if ((pitch >> 8) >= 0x34) {
     pitch += (pitch >> 8) - 0x34;
   } else if ((pitch >> 8) < 0x13) {
@@ -434,12 +434,12 @@ static void Sfx0_TurnOffChannel(SmwSpcPlayer *p) {
     Channel_SetInstrument(p, &p->channel[4], p->channel[4].instrument_id);
 }
 
-static void SetEchoVolume(SmwSpcPlayer *p) {
+static FORCEINLINE void SetEchoVolume(SmwSpcPlayer *p) {
   Dsp_Write(p, EVOLL, p->echo_volume_left >> 8);
   Dsp_Write(p, EVOLR, p->echo_volume_right >> 8);
 }
 
-static void SetEchoOff(SmwSpcPlayer *p) {
+static FORCEINLINE void SetEchoOff(SmwSpcPlayer *p) {
   p->echo_volume_left = p->echo_volume_right = 0;
   SetEchoVolume(p);
   p->sfx3_unused = 0;
@@ -678,14 +678,14 @@ static void Port1_WriteInstrument(SmwSpcPlayer *p, uint8 cmd) {
   p->channel[5].instrument_pitch_base = ip[8];
 }
 
-static inline void Chan_DoAnyFade(uint16 *p, uint16 add, uint8 target, uint8 cont) {
+static FORCEINLINE void Chan_DoAnyFade(uint16 *p, uint16 add, uint8 target, uint8 cont) {
   if (!cont)
     *p = target << 8;
   else
     *p += add;
 }
 
-static void Sfx_WritePitchSweep(SmwSpcPlayer *p, Channel *c) {
+static FORCEINLINE void Sfx_WritePitchSweep(SmwSpcPlayer *p, Channel *c) {
   Chan_DoAnyFade(&c->pitch, c->pitch_add_per_tick, c->pitch_target, --c->pitch_slide_length);
   p->cur_chan_bit = 0;  // force change through
   WritePitch(p, c, c->pitch);
@@ -1102,7 +1102,7 @@ pitch_env:
   }
 }
 
-static void ComputePitchAdd(Channel *c, uint8 pitch) {
+static FORCEINLINE void ComputePitchAdd(Channel *c, uint8 pitch) {
   c->pitch_target = pitch & 0x7f;
   c->pitch_add_per_tick = SpcDivHelper(c->pitch_target - (c->pitch >> 8), c->pitch_slide_length);
 }
@@ -1137,7 +1137,7 @@ static void Chan_HandleTick(SmwSpcPlayer *p, Channel *c) {
   WriteVolumeToDsp(p, c, c->pan_value);
 }
 
-static void WriteVolumeToDsp(SmwSpcPlayer *p, Channel *c, uint16 volume) {
+static FORCEINLINE void WriteVolumeToDsp(SmwSpcPlayer *p, Channel *c, uint16 volume) {
   static const uint8 kVolumeTable[22] = { 0, 1, 3, 7, 13, 21, 30, 41, 52, 66, 81, 94, 103, 110, 115, 119, 122, 124, 125, 126, 127, 127 };
   if (p->is_chan_on & p->cur_chan_bit)
     return;
@@ -1224,7 +1224,7 @@ after_pitch_thing:;
     WritePitch(p, c, pitch);
 }
 
-static void CalcVibratoAddPitch(SmwSpcPlayer *p, Channel *c, uint16 pitch, uint8 value) {
+static FORCEINLINE void CalcVibratoAddPitch(SmwSpcPlayer *p, Channel *c, uint16 pitch, uint8 value) {
   int t = value << 2;
   t ^= (t & 0x100) ? 0xff : 0;
   int r = (c->vib_depth >= 0xf1) ?
@@ -1241,7 +1241,7 @@ static void CalcTremolo(SmwSpcPlayer *p, Channel *c) {
   Not_Implemented();
 }
 
-static void HandlePanAndSweep(SmwSpcPlayer *p, Channel *c) {
+static FORCEINLINE void HandlePanAndSweep(SmwSpcPlayer *p, Channel *c) {
   p->did_affect_volumepitch_flag = 0;
   if (c->tremolo_depth && c->tremolo_hold_count == c->tremolo_delay_ticks)
     HandleTremolo(p, c);
